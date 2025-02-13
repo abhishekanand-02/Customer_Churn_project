@@ -1,0 +1,36 @@
+# Python bytecode files
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual environment
+venv/
+env/
+*.env
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+
+# Logs and temporary files
+logs/
+*.log
+*.tmp
+
+# AWS credentials (if you store them here)
+*.pem
+*.key
+
+# Docker files (if you're not tracking them)
+*.tar
+*.docker
+
+# IDE/editor files (e.g., VSCode, PyCharm)
+.vscode/
+.idea/
+
+# Data files (e.g., if you're using DVC for data versioning)
+data/
+*.csv
+
+# GitHub actions generated files
+.github/workflows/*
