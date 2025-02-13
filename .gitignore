@@ -28,9 +28,5 @@ logs/
 .vscode/
 .idea/
 
-# Data files (e.g., if you're using DVC for data versioning)
-data/
-*.csv
-
 # GitHub actions generated files
 .github/workflows/*
