@@ -5,8 +5,8 @@ import numpy as np
 import pandas as pd
 from src.logger import logging 
 from src.exception import customexception
-
 from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
+from sklearn.impute import SimpleImputer
 
 # Function to save model or object to a file
 def save_object(file_path, obj):
@@ -25,20 +25,25 @@ def save_object(file_path, obj):
         logging.error(f"Error occurred while saving the object: {str(e)}")
         raise customexception(e, sys)
 
-# Function to evaluate models based on R2 score
+# Function to evaluate models based on R2 score (or other metrics if needed)
 def evaluate_model(X_train, y_train, X_test, y_test, models):
     try:
         report = {}
+
+        # Impute missing values using SimpleImputer
+        imputer = SimpleImputer(strategy="mean")  # Using mean imputation for simplicity
+        X_train_imputed = imputer.fit_transform(X_train)
+        X_test_imputed = imputer.transform(X_test)
 
         # Loop over models and evaluate each one
         for i in range(len(models)):
             model = list(models.values())[i]
             
             # Train the model
-            model.fit(X_train, y_train)
+            model.fit(X_train_imputed, y_train)
 
             # Predict testing data
-            y_test_pred = model.predict(X_test)
+            y_test_pred = model.predict(X_test_imputed)
 
             # Calculate R2 score for the model
             test_model_score = r2_score(y_test, y_test_pred)
