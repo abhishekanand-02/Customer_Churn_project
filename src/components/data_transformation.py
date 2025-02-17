@@ -1,44 +1,23 @@
-import os
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import LabelEncoder
+from src.logger import logging
+from src.exception import customexception
+import os
+import sys
+
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.base import BaseEstimator, TransformerMixin
 from src.utils.utils import save_object
-from src.logger import logging
-from src.exception import customexception
-import sys
-
-import warnings
-warnings.filterwarnings("ignore", category=FutureWarning)
-
-
-class LabelEncoderTransformer(BaseEstimator, TransformerMixin):
-    def __init__(self):
-        self.encoders = {}
-
-    def fit(self, X, y=None):
-        # Fit a separate encoder for each column
-        for i in range(X.shape[1]):
-            self.encoders[i] = LabelEncoder().fit(X[:, i])
-        return self
-
-    def transform(self, X):
-        # Apply each encoder to its respective column
-        X_encoded = X.copy()
-        for i in range(X.shape[1]):
-            # Handle unseen labels by using the same encoding as the most frequent label in the training data
-            X_encoded[:, i] = self.encoders[i].transform(X[:, i])
-        return X_encoded
+from src.utils.utils import HandleLastInteraction
 
 
 class DataTransformationConfig:
     preprocessor_obj_file_path = os.path.join('artifacts', 'preprocessor.pkl')
-    transformed_train_file_path = os.path.join('artifacts', 'transformed_train.csv')
-    transformed_test_file_path = os.path.join('artifacts', 'transformed_test.csv')
+    processed_train_file_path = os.path.join('artifacts', 'processed_train.csv')
+    processed_test_file_path = os.path.join('artifacts', 'processed_test.csv')
 
 
 class DataTransformation:
@@ -49,34 +28,33 @@ class DataTransformation:
         try:
             logging.info('Data Transformation initiated')
 
-            numerical_columns = ['Age', 'Tenure', 'Usage Frequency', 'Support Calls', 'Payment Delay', 'Total Spend']
-            categorical_columns = ['Gender', 'Subscription Type', 'Contract Length']
+            numerical_columns = ['Age', 'Tenure', 'Usage Frequency', 'Support Calls', 'Payment Delay', 
+                                 'Total Spend', 'Last Interaction']  # Exclude 'Subscription Type' and 'Contract Length'
+
+            categorical_columns = ['Gender', 'Contract Length', 'Subscription Type']
 
             logging.info('Pipeline Initiated')
 
-            # Pipeline for numerical data
             numerical_pipeline = Pipeline(
                 steps=[
-                    ('imputer', SimpleImputer(strategy='median')),  # Handle missing values with median
+                    ('imputer', SimpleImputer(strategy='median')),  # Handle missing values with the median
                     ('scaler', StandardScaler())  # Standardize numerical features
                 ]
             )
 
-            # Pipeline for categorical data
             categorical_pipeline = Pipeline(
                 steps=[
-                    ('imputer', SimpleImputer(strategy='most_frequent')),  # Handle missing categorical values
-                    ('label_encoder', LabelEncoderTransformer())  # Apply label encoding to categorical columns
+                    ('imputer', SimpleImputer(strategy='most_frequent')),  # Impute missing values with the most frequent value
+                    ('onehot', OneHotEncoder(handle_unknown='ignore'))  # One-hot encode categorical features
                 ]
             )
 
-            # Combine both pipelines using ColumnTransformer
-            preprocessor = ColumnTransformer(
-                transformers=[
-                    ('numerical_pipeline', numerical_pipeline, numerical_columns),
-                    ('categorical_pipeline', categorical_pipeline, categorical_columns)
-                ]
-            )
+            # Apply the numerical and categorical pipelines to the respective columns
+            preprocessor = ColumnTransformer([
+                ('numerical_pipeline', numerical_pipeline, numerical_columns),
+                ('categorical_pipeline', categorical_pipeline, categorical_columns),
+                ('last_interaction_handler', HandleLastInteraction(), ['Last Interaction'])  # Add custom transformer here
+            ])
 
             return preprocessor
 
@@ -86,46 +64,48 @@ class DataTransformation:
 
     def initialize_data_transformation(self, train_path, test_path):
         try:
-            # Load training and test data
             train_df = pd.read_csv(train_path)
             test_df = pd.read_csv(test_path)
 
             logging.info("Successfully loaded train and test data.")
-
-            # logging.info(f"Missing values in training data before removal:\n{train_df.isnull().sum()}")
-            # logging.info(f"Missing values in testing data before removal:\n{test_df.isnull().sum()}")
-
-            train_df = train_df.dropna()  
-            test_df = test_df.dropna()  
-
-            # logging.info(f"Missing values in training data after removal:\n{train_df.isnull().sum()}")
-            # logging.info(f"Missing values in testing data after removal:\n{test_df.isnull().sum()}")
-
+            
             preprocessing_pipeline = self.get_data_transformation()
 
             target_column = 'Churn'  
-            columns_to_drop = ['CustomerID', target_column]
+            columns_to_drop = ['CustomerID', target_column]  
 
+            # Separate features (input) and target for both train and test data
             X_train = train_df.drop(columns=columns_to_drop, axis=1)  
             y_train = train_df[target_column]  
 
-            X_test = test_df.drop(columns=columns_to_drop, axis=1) 
-            y_test = test_df[target_column]  
+            X_test = test_df.drop(columns=columns_to_drop, axis=1)  
+            y_test = test_df[target_column] 
 
+            # Handle missing values for target variable (y_train, y_test)
+            y_train = y_train.replace(["null", "unknown"], np.nan)  # Replace "null" and "unknown" with NaN
+            y_test = y_test.replace(["null", "unknown"], np.nan)
+
+            y_train = y_train.fillna(y_train.mode()[0])
+            y_test = y_test.fillna(y_test.mode()[0])  
+
+            # Apply the preprocessing pipeline to the input features
             X_train_transformed = preprocessing_pipeline.fit_transform(X_train)
             X_test_transformed = preprocessing_pipeline.transform(X_test)
-            
+
             logging.info("Preprocessing completed on training and testing datasets.")
 
-            # Combine features and target into a single dataset
+            # Combine transformed features with target variable for both training and testing
             training_data = np.c_[X_train_transformed, np.array(y_train)]
             testing_data = np.c_[X_test_transformed, np.array(y_test)]
 
-            # Save transformed training and test data as CSV
-            pd.DataFrame(training_data).to_csv(self.data_transformation_config.transformed_train_file_path, index=False)
-            pd.DataFrame(testing_data).to_csv(self.data_transformation_config.transformed_test_file_path, index=False)
+            # Save the processed data to CSV files
+            processed_train_df = pd.DataFrame(training_data)
+            processed_test_df = pd.DataFrame(testing_data)
 
-            logging.info("Transformed data saved as 'transformed_train.csv' and 'transformed_test.csv'.")
+            processed_train_df.to_csv(self.data_transformation_config.processed_train_file_path, index=False, header=False)
+            processed_test_df.to_csv(self.data_transformation_config.processed_test_file_path, index=False, header=False)
+
+            logging.info("Processed train and test data saved as CSV files.")
 
             save_object(
                 file_path=self.data_transformation_config.preprocessor_obj_file_path,
