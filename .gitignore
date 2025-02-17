@@ -30,3 +30,8 @@ logs/
 
 # GitHub actions generated files
 .github/workflows/*
+
+# Additional entries to ignore
+artifacts/model.pkl
+mlruns/
+model_random_forest.joblib
