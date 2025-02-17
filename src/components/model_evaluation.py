@@ -4,24 +4,26 @@ import mlflow
 import mlflow.sklearn
 import pandas as pd
 from src.utils.utils import load_object
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+from urllib.parse import urlparse
 from src.logger import logging
 from src.exception import customexception
-from urllib.parse import urlparse
-import numpy as np
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
+
 
 class ModelEvaluation:
     def __init__(self):
         logging.info("Model evaluation started")
 
     def eval_metrics(self, actual, pred):
-        """Evaluate the model performance with RMSE, MAE, and R2"""
+        """Evaluate the model performance with Accuracy, Precision, Recall, F1, and ROC AUC"""
         try:
-            rmse = np.sqrt(mean_squared_error(actual, pred))  # Root Mean Squared Error
-            mae = mean_absolute_error(actual, pred)  # Mean Absolute Error
-            r2 = r2_score(actual, pred)  # R2 Score
-            logging.info(f"Evaluation metrics captured: RMSE={rmse}, MAE={mae}, R2={r2}")
-            return rmse, mae, r2
+            accuracy = accuracy_score(actual, pred)  # Accuracy Score
+            precision = precision_score(actual, pred)  # Precision Score
+            recall = recall_score(actual, pred)  # Recall Score
+            f1 = f1_score(actual, pred)  # F1 Score
+            roc_auc = roc_auc_score(actual, pred)  # ROC AUC Score
+            logging.info("Evaluation metrics captured: Accuracy, Precision, Recall, F1, ROC AUC")
+            return accuracy, precision, recall, f1, roc_auc
         except Exception as e:
             logging.error("Error in calculating evaluation metrics")
             raise customexception(e, sys)
@@ -32,35 +34,34 @@ class ModelEvaluation:
             # Splitting features and target from the test array
             X_test, y_test = test_array[:, :-1], test_array[:, -1]
 
-            # Load the trained model
-            model_path = os.path.join("artifacts", "best_model.pkl")
-            model = load_object(model_path)
+            model_path = os.path.join("artifacts", "model.pkl")
 
-            # Log the model evaluation process
+            try:
+                model = load_object(model_path)
+                logging.info("Model loaded successfully using pickle")
+            except Exception as e:
+                logging.error("Error occurred while loading the model")
+                raise customexception(e, sys)
+
             logging.info("Model loaded and evaluation initiated")
 
-            # Get the tracking URL type for MLflow
             tracking_url_type_store = urlparse(mlflow.get_tracking_uri()).scheme
             logging.info(f"Tracking URL type: {tracking_url_type_store}")
 
             with mlflow.start_run():
-                # Predict using the model
                 prediction = model.predict(X_test)
 
-                # Evaluate model metrics
-                rmse, mae, r2 = self.eval_metrics(y_test, prediction)
+                accuracy, precision, recall, f1, roc_auc = self.eval_metrics(y_test, prediction)
 
-                # Log metrics to MLflow
-                mlflow.log_metric("rmse", rmse)
-                mlflow.log_metric("r2", r2)
-                mlflow.log_metric("mae", mae)
+                mlflow.log_metric("accuracy", accuracy)
+                mlflow.log_metric("precision", precision)
+                mlflow.log_metric("recall", recall)
+                mlflow.log_metric("f1", f1)
+                mlflow.log_metric("roc_auc", roc_auc)
 
-                # Log the model to MLflow
                 if tracking_url_type_store != "file":
-                    # Register the model if the tracking store is not a file
-                    mlflow.sklearn.log_model(model, "model", registered_model_name="ml_model")
+                    mlflow.sklearn.log_model(model, "model", registered_model_name="churn_model")
                 else:
-                    # Log model without registration if it's stored in a file-based system
                     mlflow.sklearn.log_model(model, "model")
 
                 logging.info("Model evaluation and logging to MLflow completed.")
@@ -69,19 +70,21 @@ class ModelEvaluation:
             logging.error("Exception occurred during model evaluation")
             raise customexception(e, sys)
 
-if __name__ == "__main__":
-    # Load the train and test data from CSV files
-    train_data_path = 'artifacts/transformed_train.csv'
-    test_data_path = 'artifacts/transformed_test.csv'
-    
-    # Load CSV files using pandas
-    train_data = pd.read_csv(train_data_path)
-    test_data = pd.read_csv(test_data_path)
-    
-    # Convert DataFrames to numpy arrays
-    train_array = train_data.values
-    test_array = test_data.values
 
-    # Create an instance of the ModelEvaluation class and initiate evaluation
-    evaluator = ModelEvaluation()
-    evaluator.initiate_model_evaluation(train_array, test_array)
+if __name__ == "__main__":
+    try:
+        train_data_path = 'artifacts/processed_train.csv'
+        test_data_path = 'artifacts/processed_test.csv'
+        
+        train_data = pd.read_csv(train_data_path)
+        test_data = pd.read_csv(test_data_path)
+        
+        train_array = train_data.values
+        test_array = test_data.values
+
+        evaluator = ModelEvaluation()
+        evaluator.initiate_model_evaluation(train_array, test_array)
+
+    except Exception as e:
+        logging.error("Error occurred during model evaluation execution")
+        raise customexception(e, sys)
