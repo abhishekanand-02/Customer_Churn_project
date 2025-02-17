@@ -5,8 +5,10 @@ import numpy as np
 import pandas as pd
 from src.logger import logging 
 from src.exception import customexception
-from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
+from sklearn.metrics import r2_score
 from sklearn.impute import SimpleImputer
+from sklearn.base import BaseEstimator, TransformerMixin
+
 
 # Function to save model or object to a file
 def save_object(file_path, obj):
@@ -66,3 +68,16 @@ def load_object(file_path):
     except Exception as e:
         logging.error(f"Error occurred while loading the object: {str(e)}")
         raise customexception(e, sys)
+    
+class HandleLastInteraction(BaseEstimator, TransformerMixin):
+    """Custom transformer to handle 'Last Interaction' column."""
+
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X):
+        # Replace 'null' and 'unknown' with NaN and convert to numeric
+        X['Last Interaction'] = X['Last Interaction'].replace(['null', 'unknown'], np.nan)
+        X['Last Interaction'] = pd.to_numeric(X['Last Interaction'], errors='coerce')  # Convert non-numeric to NaN
+        X['Last Interaction'] = X['Last Interaction'].fillna(X['Last Interaction'].median())  # Fill NaN with median
+        return X
