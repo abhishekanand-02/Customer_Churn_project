@@ -4,3 +4,4 @@ mlflow
 dvc
 dagshub
 numpy
+streamlit
