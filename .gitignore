@@ -28,8 +28,7 @@ logs/
 .vscode/
 .idea/
 
-# GitHub actions generated files
-.github/workflows/*
+
 
 # Additional entries to ignore
 artifacts/model.pkl
