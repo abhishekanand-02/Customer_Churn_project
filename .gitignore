@@ -31,6 +31,6 @@ logs/
 
 
 # Additional entries to ignore
-artifacts/model.pkl
+
 mlruns/
 model_random_forest.joblib
