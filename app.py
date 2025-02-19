@@ -8,35 +8,39 @@ app = Flask(__name__)
 
 def process_input(form):
     """Processes user input from the form"""
-    age = int(form['age'])
-    gender = form['gender']
-    tenure = int(form['tenure'])
-    usage_frequency = int(form['usage_frequency'])
-    support_calls = int(form['support_calls'])
-    payment_delay = int(form['payment_delay'])
-    subscription_type = form['subscription_type']
-    contract_length = form['contract_length']
-    total_spend = int(form['total_spend'])
-    last_interaction = datetime.strptime(form['last_interaction'], '%Y-%m-%d')
-    
-    # Calculate days since last interaction
-    days_since_last_interaction = (datetime.today().date() - last_interaction.date()).days
+    try:
+        age = int(form['age'])
+        gender = form['gender']
+        tenure = int(form['tenure'])
+        usage_frequency = int(form['usage_frequency'])
+        support_calls = int(form['support_calls'])
+        payment_delay = int(form['payment_delay'])
+        subscription_type = form['subscription_type']
+        contract_length = form['contract_length']
+        total_spend = int(form['total_spend'])
+        last_interaction = datetime.strptime(form['last_interaction'], '%Y-%m-%d')
+        
+        # Calculate days since last interaction
+        days_since_last_interaction = (datetime.today().date() - last_interaction.date()).days
 
-    # Prepare data
-    data = {
-        'age': age,
-        'gender': gender,
-        'tenure': tenure,
-        'usage_frequency': usage_frequency,
-        'support_calls': support_calls,
-        'payment_delay': payment_delay,
-        'subscription_type': subscription_type,
-        'contract_length': contract_length,
-        'total_spend': total_spend,
-        'last_interaction': days_since_last_interaction
-    }
+        # Prepare data
+        data = {
+            'age': age,
+            'gender': gender,
+            'tenure': tenure,
+            'usage_frequency': usage_frequency,
+            'support_calls': support_calls,
+            'payment_delay': payment_delay,
+            'subscription_type': subscription_type,
+            'contract_length': contract_length,
+            'total_spend': total_spend,
+            'last_interaction': days_since_last_interaction
+        }
 
-    return pd.DataFrame(data, index=[0])
+        return pd.DataFrame(data, index=[0])
+    except Exception as e:
+        logging.error(f"Error processing input: {str(e)}")
+        return None
 
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -44,6 +48,8 @@ def index():
     if request.method == "POST":
         try:
             user_data = process_input(request.form)
+            if user_data is None:
+                return render_template("index.html", error="Invalid input data. Please check your values.")
 
             # Encoding categorical variables
             gender_mapping = {'Male': 0, 'Female': 1}
@@ -61,7 +67,9 @@ def index():
 
             # Run Prediction
             predict_pipeline = PredictPipeline()
-            prediction = predict_pipeline.predict(input_data)[0]
+            prediction = predict_pipeline.predict(input_data)
+
+            logging.info(f"Prediction result: {prediction}")
 
             return render_template("result.html", prediction=prediction)
 
@@ -72,4 +80,4 @@ def index():
     return render_template("index.html")
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8080)
+    app.run(host="0.0.0.0", port=8080, debug=True)
