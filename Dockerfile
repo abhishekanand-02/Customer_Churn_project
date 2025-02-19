@@ -13,8 +13,14 @@ COPY . /app
 # Step 4: Install the Python dependencies listed in requirements.txt  
 RUN pip install --no-cache-dir -r requirements.txt  
 
-# Step 5: Set the command to run Streamlit when the container starts  
+
+EXPOSE 8501
+
+
+# Step 5: Set the command to run Streamlit when the container starts 
+ENTRYPOINT ["streamlit", "run", "streamlit_app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+
 # CMD ["streamlit", "run", "app.py"]
-CMD ["streamlit", "run", "app.py", "--server.address=0.0.0.0", "--server.port=8501"]
+# CMD ["streamlit", "run", "app.py", "--server.address=0.0.0.0", "--server.port=8501"]
 
 
