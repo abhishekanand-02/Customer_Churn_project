@@ -18,7 +18,7 @@ EXPOSE 8501
 
 
 # Step 5: Set the command to run Streamlit when the container starts 
-ENTRYPOINT ["streamlit", "run", "streamlit_app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+ENTRYPOINT ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
 
 # CMD ["streamlit", "run", "app.py"]
 # CMD ["streamlit", "run", "app.py", "--server.address=0.0.0.0", "--server.port=8501"]
