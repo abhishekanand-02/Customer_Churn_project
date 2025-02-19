@@ -47,10 +47,12 @@ def index():
     """Renders the home page"""
     if request.method == "POST":
         try:
+            print("Received POST request!")  # Debugging
+            print(request.form)  # Print form data
+            
             user_data = process_input(request.form)
-            if user_data is None:
-                return render_template("index.html", error="Invalid input data. Please check your values.")
-
+            print(user_data)  # Check processed input
+            
             # Encoding categorical variables
             gender_mapping = {'Male': 0, 'Female': 1}
             subscription_mapping = {'Standard': 0, 'Basic': 1, 'Premium': 2}
@@ -67,9 +69,9 @@ def index():
 
             # Run Prediction
             predict_pipeline = PredictPipeline()
-            prediction = predict_pipeline.predict(input_data)
+            prediction = predict_pipeline.predict(input_data)[0]
 
-            logging.info(f"Prediction result: {prediction}")
+            print("Prediction:", prediction)  # Debug output
 
             return render_template("result.html", prediction=prediction)
 
@@ -78,6 +80,7 @@ def index():
             return render_template("index.html", error="An error occurred. Try again!")
 
     return render_template("index.html")
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8080, debug=True)
