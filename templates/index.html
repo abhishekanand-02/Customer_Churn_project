@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="static/style.css">
+
+    <title>Customer Churn Prediction</title>
+</head>
+<body>
+    <h2>Enter Customer Details</h2>
+    <form action="/" method="post">
+        Age: <input type="number" name="age" required><br>
+        Gender: <select name="gender">
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+        </select><br>
+        Tenure (Years): <input type="number" name="tenure" required><br>
+        Usage Frequency: <input type="number" name="usage_frequency" required><br>
+        Support Calls: <input type="number" name="support_calls" required><br>
+        Payment Delay (Months): <input type="number" name="payment_delay" required><br>
+        Subscription Type: 
+        <select name="subscription_type">
+            <option value="Standard">Standard</option>
+            <option value="Basic">Basic</option>
+            <option value="Premium">Premium</option>
+        </select><br>
+        Contract Length: 
+        <select name="contract_length">
+            <option value="Monthly">Monthly</option>
+            <option value="Quarterly">Quarterly</option>
+            <option value="Annual">Annual</option>
+        </select><br>
+        Total Spend (INR): <input type="number" name="total_spend" required><br>
+        Last Interaction: <input type="date" name="last_interaction" required><br>
+
+        <button type="submit">Predict</button>
+    </form>
+</body>
+</html>
+
